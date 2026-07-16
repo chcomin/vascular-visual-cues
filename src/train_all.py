@@ -1,7 +1,8 @@
 import os
 
 def generate_combinations(base_values, new_values, flag = "kernels"):
-    """Generate combinations of model configurations based on base values and new values."""
+    """Generate combinations of model configurations by replacing values in the base list with the values
+    in the new_values."""
 
     n_layers = len(base_values)
     all_confs = {"base": base_values}
@@ -129,7 +130,7 @@ def train_all(configs:list, seed:int = 0, transform = None, data = "DRIVE", mode
     results = f"../data/results/{data}"
     im_size = 256 if data == "VessMAP" else 512
     in_c = 1 if data == "VessMAP" else 3
-    for idx in range(0, 1): #len(configs)):
+    for idx in range(0, len(configs)):
         config = configs[idx]
         arch_conf_str = str(config)
         model_id = idx+1
