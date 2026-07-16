@@ -13,31 +13,33 @@ from scipy import ndimage
 from skimage.morphology import skeletonize
 
 def erosion(img, target):
+    """Calculate the contour of the vessels by subtracting the erosion of the label from the label itself.
+    Insert the original intensity values of the image in the contour region.
+    """
+
     img = np.array(img)
     target = np.array(target)
 
-    # Realizando a erosão pelo scipy
     erosion = ndimage.binary_erosion(target)*1
-
-    # Subtraindo a erosão da imagem original
     subtraction_result = target - erosion
 
-    # Nova imagem só com os pontos do contorno
     img_result = np.zeros_like(img)
-    img_result[subtraction_result == 1] = img[subtraction_result == 1]
+    img_result[subtraction_result > 0] = img[subtraction_result > 0]
     
     return Image.fromarray(img_result)
 
 def skeletization(img, target):
+    """Calculate the skeleton of the vessels by applying the skeletonization algorithm to the label.
+    Insert the original intensity values of the image in the skeleton region.
+    """
+
     img = np.array(img)
     target = np.array(target)
 
-    # Fazendo a esqueletização
     skeleton = skeletonize(target)
-    
-    # Nova imagem só com o esqueleto dos vasos
+  
     img_result = np.zeros_like(img)
-    img_result[skeleton == True] = img[skeleton == True]
+    img_result[skeleton > 0] = img[skeleton > 0]
 
     return Image.fromarray(img_result)
 
@@ -106,7 +108,7 @@ class TestDataset(Dataset):
         self.im_list = df.im_paths
         self.mask_list = df.mask_paths
         self.channels = channels
-        self.tranforms = TestTransforms(tg_size)
+        self.transforms = TestTransforms(tg_size)
 
     def crop_to_fov(self, img, mask):
         mask = np.array(mask).astype(int)
@@ -132,7 +134,7 @@ class TestDataset(Dataset):
         img, coords_crop = self.crop_to_fov(img, mask)
         original_sz = img.size[1], img.size[0]  # in numpy convention
 
-        img = self.tranforms(img)
+        img = self.transforms(img)
 
         return img, np.array(mask).astype(bool), coords_crop, original_sz, self.im_list[index]
 

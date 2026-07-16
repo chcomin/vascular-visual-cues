@@ -15,15 +15,6 @@ from models.get_model import get_arch
 from utils.get_loaders import get_test_dataset
 from utils.model_saving_loading import load_model
 
-def flip_ud(tens):
-    return torch.flip(tens, dims=[1])
-
-def flip_lr(tens):
-    return torch.flip(tens, dims=[2])
-
-def flip_lrud(tens):
-    return torch.flip(tens, dims=[1, 2])
-
 def create_pred(model, tens, mask, coords_crop, original_sz, tta='no'):
     act = torch.sigmoid if model.n_classes == 1 else torch.nn.Softmax(dim=0)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -69,7 +60,7 @@ def save_pred(full_pred, save_results_path, im_name, seed = ""):
         # this casts preds to int, loses precision but meh
         imsave(save_name, img_as_ubyte(full_pred))
 
-def save_timetoInfer(config_file, time):
+def save_time_to_infer(config_file, time):
         dic = {}
         with open(config_file, 'r') as f:
             dic = json.load(f)
@@ -147,7 +138,7 @@ def main(args):
         times.append(time.perf_counter() - start_time)
         save_pred(full_pred, save_results_path, im_name, seed_str)
     
-    save_timetoInfer(config_file, round(np.mean(times), 6))
+    save_time_to_infer(config_file, round(np.mean(times), 6))
     print(f"* Average image time: {np.mean(times):g}s")
     print('* Done')
 

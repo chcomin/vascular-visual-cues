@@ -146,18 +146,18 @@ class DicUNet(nn.Module):
 
         # UP BLOCK 1
         out_uplayer1 = self.up_layer1(out_block2)
-        out_convBridge1 = self.conv_bridge1(out_block1)
-        out_Concat1 = torch.cat([out_uplayer1, out_convBridge1], dim=1)
-        up_block1_residual = self.up_block1_residual(out_Concat1)
-        up_block1_conv = self.up_block1_conv(out_Concat1)
+        out_conv_bridge1 = self.conv_bridge1(out_block1)
+        out_concat1 = torch.cat([out_uplayer1, out_conv_bridge1], dim=1)
+        up_block1_residual = self.up_block1_residual(out_concat1)
+        up_block1_conv = self.up_block1_conv(out_concat1)
         out_up_block1 = up_block1_conv + up_block1_residual
 
         # UP BLOCK 2
         out_uplayer2 = self.up_layer2(out_up_block1)
-        out_convBridge2 = self.conv_bridge2(out_first)
-        out_Concat2 = torch.cat([out_uplayer2, out_convBridge2], dim=1)
-        up_block2_residual = self.up_block2_residual(out_Concat2)
-        up_block2_conv = self.up_block2_conv(out_Concat2)
+        out_conv_bridge2 = self.conv_bridge2(out_first)
+        out_concat2 = torch.cat([out_uplayer2, out_conv_bridge2], dim=1)
+        up_block2_residual = self.up_block2_residual(out_concat2)
+        up_block2_conv = self.up_block2_conv(out_concat2)
         out_up_block2 = up_block2_conv + up_block2_residual
 
         final = self.conv_final(out_up_block2)

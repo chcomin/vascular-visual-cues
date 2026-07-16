@@ -44,14 +44,6 @@ def set_seeds(seed_value, use_cuda):
         torch.backends.cudnn.deterministic = True  # needed
         torch.backends.cudnn.benchmark = False
 
-def reduce_lr(optimizer, epoch, factor=0.1, verbose=True):
-    for i, param_group in enumerate(optimizer.param_groups):
-        old_lr = float(param_group['lr'])
-        new_lr = old_lr * factor
-        param_group['lr'] = new_lr
-        if verbose:
-            print(f'Epoch {epoch:5d}: reducing learning rate of group {i} to {new_lr:.4e}.')
-
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
@@ -257,8 +249,8 @@ def main(arg_dict=None):
         
         dic = {"Best_AUC":f"{100*best_auc:.2f}","Best_DICE":f"{100*best_dice:.2f}","Best_epoch":f"{best_epoch}", "params": num_p }
 
-        with open(osp.join(experiment_path,f'val_metrics{seed_str}.json'), 'w') as arquivo:
-            json.dump(dic, arquivo, indent=4)
+        with open(osp.join(experiment_path,f'val_metrics{seed_str}.json'), 'w') as file:
+            json.dump(dic, file, indent=4)
         
 
 def get_parser():

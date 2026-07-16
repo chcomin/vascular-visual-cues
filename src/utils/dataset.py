@@ -189,46 +189,6 @@ class ValidTransforms:
 
         return img, target
 
-def get_dataset_drive_test(
-        dataset_path, 
-        resize_size = None, 
-        channels="all",
-        ):
-    """Get the DRIVE dataset used for training and test.
-
-    Parameters
-    ----------
-    dataset_path
-        Path to the dataset root folder
-    split_strategy
-        Strategy to split the dataset. Possible values are:
-        "default": Use the default train/test split of the dataset
-        "file": Use the train.csv and test.csv files to split the dataset
-    resize_size
-        Size to resize the images
-    channels
-        Image channels to use. Options are:
-        "all": Use all channels
-        "green": Use only the green channel
-        "gray": Convert the image to grayscale
-    use_ignore_index
-        If True, the ignore index is set to 2. Otherwise, it is set to None
-    """
-
-    drive_params = {
-        "channels":channels, "keepdim":True, "ignore_index":False
-    }
-
-    ds_train = DRIVE(dataset_path, split="train", **drive_params)
-    ds_test = DRIVE(dataset_path, split="test", **drive_params)
-
-
-    ds_train.transforms = ValidTransforms(resize_size)
-    ds_test.transforms = ValidTransforms(resize_size)
-
-
-    return ds_train, ds_test
-
 def search_files(files: list[str], paths: list[Path]) -> list[int]:
     """Search for each file in list `paths` and return the indices of the files found
     in the paths list. Paths can then be fitlered as:

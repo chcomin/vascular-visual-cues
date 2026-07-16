@@ -147,8 +147,8 @@ def main(args):
                         'sens': sens_tr,
                         'opt_t': opt_thresh_tr}
     
-    with open(osp.join(save_path, perf_csv_path), 'w') as arquivo:
-        json.dump(perf_df_train, arquivo, indent=4)
+    with open(osp.join(save_path, perf_csv_path), 'w') as file:
+        json.dump(perf_df_train, file, indent=4)
 
     print(f'* Analyzing performance in {dataset} validation set')
     perf_csv_path = osp.join(f'validation_performance{seed_str}.json')
@@ -162,8 +162,8 @@ def main(args):
                                   'MCC': mcc_vl,
                                   'spec': spec_vl,
                                   'sens': sens_vl}
-    with open(osp.join(save_path, perf_csv_path), 'w') as arquivo:
-        json.dump(perf_df_validation, arquivo, indent=4)
+    with open(osp.join(save_path, perf_csv_path), 'w') as file:
+        json.dump(perf_df_validation, file, indent=4)
 
     print(f'*Analyzing performance in {dataset} test set')
     print(f'* Reading predictions from {path_preds}')
@@ -185,8 +185,8 @@ def main(args):
                                  'MCC': mcc_test,
                                  'spec': spec_test,
                                  'sens': sens_test}
-    with open(osp.join(save_path, perf_csv_path), 'w') as arquivo:
-        json.dump(perf_df_test, arquivo, indent=4)
+    with open(osp.join(save_path, perf_csv_path), 'w') as file:
+        json.dump(perf_df_test, file, indent=4)
     
 
     # SAVE ALL PERF IN ONE JSON
@@ -197,8 +197,8 @@ def main(args):
     #perf_all["test2"] = perf_df_test2
     save_all_path = save_path.replace("results", "experiments")
     save_all_path = save_all_path.replace("perf", "")
-    with open(osp.join(save_all_path, f'all_performance{seed_str}.json'), 'w') as arquivo:
-        json.dump(perf_all, arquivo, indent=4)
+    with open(osp.join(save_all_path, f'all_performance{seed_str}.json'), 'w') as file:
+        json.dump(perf_all, file, indent=4)
 
 
     print('* Done')

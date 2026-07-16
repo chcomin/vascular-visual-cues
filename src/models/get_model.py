@@ -1,6 +1,6 @@
 import sys
 import torch
-from .res_unet_adrian import UNet as unet
+from .res_unet_adrian import UNet
 from .dic_unet import DicUNet
 
 def build_conf(arch_conf_str, in_c=3):
@@ -180,11 +180,11 @@ def build_conf(arch_conf_str, in_c=3):
     
     return params
 
-class wnet(torch.nn.Module):
+class WNet(torch.nn.Module):
     def __init__(self, n_classes=1, in_c=3, layers=(8,16,32), conv_bridge=True, shortcut=True, mode='train'):
-        super(wnet, self).__init__()
-        self.unet1 = unet(in_c=in_c, n_classes=n_classes, layers=layers, conv_bridge=conv_bridge, shortcut=shortcut)
-        self.unet2 = unet(in_c=in_c+n_classes, n_classes=n_classes, layers=layers, conv_bridge=conv_bridge, shortcut=shortcut)
+        super(WNet, self).__init__()
+        self.unet1 = UNet(in_c=in_c, n_classes=n_classes, layers=layers, conv_bridge=conv_bridge, shortcut=shortcut)
+        self.unet2 = UNet(in_c=in_c+n_classes, n_classes=n_classes, layers=layers, conv_bridge=conv_bridge, shortcut=shortcut)
         self.n_classes = n_classes
         self.mode=mode
 
@@ -198,16 +198,16 @@ class wnet(torch.nn.Module):
 def get_arch(model_name, arch_conf_str, in_c=3, n_classes=1):
 
     if model_name == 'unet':
-        model = unet(in_c=in_c, n_classes=n_classes, layers=[8,16,32], conv_bridge=True, shortcut=True)
+        model = UNet(in_c=in_c, n_classes=n_classes, layers=[8,16,32], conv_bridge=True, shortcut=True)
     elif model_name == 'dic_unet':
         arch_conf = build_conf(arch_conf_str, in_c)
         model = DicUNet(arch_conf = arch_conf)
     elif model_name == 'big_unet':
-        model = unet(in_c=in_c, n_classes=n_classes, layers=[12,24,48], conv_bridge=True, shortcut=True)
+        model = UNet(in_c=in_c, n_classes=n_classes, layers=[12,24,48], conv_bridge=True, shortcut=True)
     elif model_name == 'wnet':
-        model = wnet(in_c=in_c, n_classes=n_classes, layers=[8,16,32], conv_bridge=True, shortcut=True)
+        model = WNet(in_c=in_c, n_classes=n_classes, layers=[8,16,32], conv_bridge=True, shortcut=True)
     elif model_name == 'big_wnet':
-        model = wnet(in_c=in_c, n_classes=n_classes, layers=[8,16,32,64], conv_bridge=True, shortcut=True)
+        model = WNet(in_c=in_c, n_classes=n_classes, layers=[8,16,32,64], conv_bridge=True, shortcut=True)
     else: 
         sys.exit('not a valid model_name, check models/get_model.py')
     
