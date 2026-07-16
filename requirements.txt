@@ -1,0 +1,10 @@
+#python==3.14 
+numpy==2.4
+torch==2.10
+torchvision==0.25
+skimage==0.26
+pandas==3.0
+PIL==12.1
+matplotlib==3.10
+sklearn==1.8
+tqdm==4.67

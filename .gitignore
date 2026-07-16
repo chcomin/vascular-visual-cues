@@ -1,0 +1,6 @@
+__pycache__/
+.vscode/
+data/DRIVE/*/
+data/VessMAP/*/
+data/experiments/
+data/results/
