@@ -12,6 +12,8 @@ from torchvision import tv_tensors
 from scipy import ndimage
 from skimage.morphology import skeletonize
 
+from .windowing import window_partition
+
 def erosion(img, target):
     """Calculate the contour of the vessels by subtracting the erosion of the label from the label itself.
     Insert the original intensity values of the image in the contour region.
@@ -100,6 +102,50 @@ class TrainDataset(Dataset):
 
     def __len__(self):
         return len(self.im_list)
+
+class WindowedTrainDataset(Dataset):
+    """Divide each resized image of the dataset into non-overlapping windows of size
+    window_size x window_size. Each window is a sample of the dataset."""
+
+    def __init__(self, csv_path, transforms=None, label_values=None, channels='all', tg_size=256, window_size=256):
+
+        ds = TrainDataset(csv_path, BasicTransforms(tg_size), label_values, channels)
+
+        imgs = []
+        targets = []
+        for img, target in ds:
+            img = img.permute(1, 2, 0).unsqueeze(0)
+            windows, _ = window_partition(img, window_size)
+            windows = windows.permute(0, 3, 1, 2)
+            imgs.append(windows)
+
+            # TrainDataset returns a float target, keep it as uint8 for the transforms
+            target = target.to(torch.uint8).unsqueeze(2).unsqueeze(0)
+            windows, _ = window_partition(target, window_size=window_size)
+            windows = windows.squeeze(-1)
+            targets.append(windows)
+
+        self.imgs = torch.cat(imgs)
+        self.targets = torch.cat(targets)
+        self.transforms = transforms
+
+    def __getitem__(self, index):
+
+        if index >= len(self):
+            raise IndexError('index out of range')
+
+        img = Image.fromarray(np.array(self.imgs[index].permute(1, 2, 0).squeeze()))
+        target = Image.fromarray(np.array(self.targets[index]))
+
+        if self.transforms is not None:
+            img, target = self.transforms(img, target)
+
+        target = target.float()
+
+        return img, target
+
+    def __len__(self):
+        return len(self.imgs)
 
 class TestDataset(Dataset):
     def __init__(self, csv_path, tg_size, channels='all'):
@@ -261,22 +307,61 @@ class TestTransforms:
 
         return img
 
-def get_train_val_datasets(csv_path_train, csv_path_val, tg_size=(512, 512), label_values=(0, 255), channels='all', transform = None):
+class BasicTransforms:
+    """Only resize the image and the label and convert them to uint8 tensors. Used for
+    creating the windows of WindowedTrainDataset."""
 
-    train_dataset = TrainDataset(
-        csv_path=csv_path_train, label_values=label_values, channels=channels
-        )
-    val_dataset = TrainDataset(
-        csv_path=csv_path_val, label_values=label_values, channels=channels)
+    def __init__(self, tg_size):
 
-    train_dataset.transforms = TrainTransforms(tg_size, transform)
-    val_dataset.transforms = ValidTransforms(tg_size)
+        self.tg_size = tg_size
+
+    def __call__(self, img, target):
+
+        img = tv_transf_F.resize(img, self.tg_size)
+        # NEAREST_EXACT has a 0.01 better Dice score than NEAREST. The
+        # object oriented version of resize uses NEAREST, thus we need to use
+        # the functional interface
+        target = tv_transf_F.resize(target, self.tg_size, interpolation=tv_transf.InterpolationMode.NEAREST_EXACT)
+
+        img = torch.from_numpy(np.array(img))
+        if img.ndim == 2:
+            img = img.unsqueeze(2)
+        img = img.permute(2, 0, 1)
+        target = torch.from_numpy(np.array(target))
+
+        return img, target
+
+def get_train_val_datasets(csv_path_train, csv_path_val, tg_size=(512, 512), label_values=(0, 255), channels='all', transform = None, window_size=0):
+    """If window_size > 0, the images are divided into non-overlapping windows of size
+    window_size x window_size."""
+
+    if window_size == 0:
+        train_dataset = TrainDataset(
+            csv_path=csv_path_train, label_values=label_values, channels=channels
+            )
+        val_dataset = TrainDataset(
+            csv_path=csv_path_val, label_values=label_values, channels=channels)
+        resize_size = tg_size
+    else:
+        train_dataset = WindowedTrainDataset(
+            csv_path=csv_path_train, label_values=label_values, channels=channels,
+            tg_size=tg_size, window_size=window_size
+            )
+        val_dataset = WindowedTrainDataset(
+            csv_path=csv_path_val, label_values=label_values, channels=channels,
+            tg_size=tg_size, window_size=window_size
+            )
+        resize_size = window_size
+
+    train_dataset.transforms = TrainTransforms(resize_size, transform)
+    val_dataset.transforms = ValidTransforms(resize_size)
 
     return train_dataset, val_dataset
 
-def get_train_val_loaders(csv_path_train, csv_path_val, batch_size=4, tg_size=(512, 512), label_values=(0, 255), channels='all', num_workers=0, transform = None):
+def get_train_val_loaders(csv_path_train, csv_path_val, batch_size=4, tg_size=(512, 512), label_values=(0, 255), channels='all', num_workers=0, transform = None, window_size=0):
     train_dataset, val_dataset = get_train_val_datasets(
-        csv_path_train, csv_path_val, tg_size=tg_size, label_values=label_values, channels=channels, transform = transform
+        csv_path_train, csv_path_val, tg_size=tg_size, label_values=label_values, channels=channels, transform = transform,
+        window_size=window_size
         )
 
     train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=torch.cuda.is_available(), shuffle=True)
