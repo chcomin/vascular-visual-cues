@@ -213,7 +213,8 @@ def main(arg_dict=None):
 
     train_loader, val_loader = get_train_val_loaders(csv_path_train=csv_train, csv_path_val=csv_val, batch_size=bs, 
                                                      tg_size=tg_size, label_values=label_values, channels=channels,
-                                                     num_workers=args.num_workers, transform = transform)
+                                                     num_workers=args.num_workers, transform = transform,
+                                                     window_size=args.window_size)
 
     print(f'\n\n{'*'*10} Instantiating a {model_name} model - IDENTIFICATOR {model_id}')
     model = get_arch(model_name, arch_conf_str, in_c=in_c)
@@ -259,6 +260,7 @@ def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--experiment', type=str, default='../data/experiments', help='path to experiments data of validation and configs')
     parser.add_argument('--transform', type=str, default=None, help='Transform type, can be \'erosion\' or \'skeleton\'')
+    parser.add_argument('--window_size', type=int, default=0, help='Train on non-overlapping windows of this size. 0 means no windowing (the full image is used)')
     parser.add_argument('--model_id', type=str, default='1', help='number of the experiment')
     parser.add_argument('--seed', type=int, default=None, help='seed to use. If explicitly set, it is appended to the names of the experiment results')
     parser.add_argument('--epochs', type=int, default=1000, help='number of epochs to train')

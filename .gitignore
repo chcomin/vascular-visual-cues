@@ -4,3 +4,6 @@ data/DRIVE/*/
 data/VessMAP/*/
 data/experiments/
 data/results/
+classification/patches/
+classification/results/
+patch_size/*.pdf

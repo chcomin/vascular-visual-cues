@@ -14,19 +14,30 @@ import torch
 from models.get_model import get_arch
 from utils.get_loaders import get_test_dataset
 from utils.model_saving_loading import load_model
+from utils.windowing import window_partition, window_unpartition
 
-def create_pred(model, tens, mask, coords_crop, original_sz, tta='no'):
-    act = torch.sigmoid if model.n_classes == 1 else torch.nn.Softmax(dim=0)
+def create_pred(model, tens, mask, coords_crop, original_sz, tta='no', window_size=0):
+    act = torch.sigmoid if model.n_classes == 1 else torch.nn.Softmax(dim=1)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    tens = tens.unsqueeze(0)
+    if window_size > 0:
+        # Each window is segmented independently
+        H, W = tens.shape[-2:]
+        tens = tens.permute(0, 2, 3, 1)
+        tens, pad_hw = window_partition(tens, window_size)
+        tens = tens.permute(0, 3, 1, 2)
+
+    tens = tens.to(device)
     with torch.no_grad():
-        logits = model(tens.unsqueeze(dim=0).to(device)).squeeze(dim=0)
+        logits = model(tens)
     pred = act(logits)
 
     if tta!='no':
         with torch.no_grad():
-            logits_lr = model(tens.flip(-1).unsqueeze(dim=0).to(device)).squeeze(dim=0).flip(-1)
-            logits_ud = model(tens.flip(-2).unsqueeze(dim=0).to(device)).squeeze(dim=0).flip(-2)
-            logits_lrud = model(tens.flip(-1).flip(-2).unsqueeze(dim=0).to(device)).squeeze(dim=0).flip(-1).flip(-2)
+            logits_lr = model(tens.flip(-1)).flip(-1)
+            logits_ud = model(tens.flip(-2)).flip(-2)
+            logits_lrud = model(tens.flip(-1).flip(-2)).flip(-1).flip(-2)
 
         if tta == 'from_logits':
             mean_logits = torch.mean(torch.stack([logits, logits_lr, logits_ud, logits_lrud]), dim=0)
@@ -37,7 +48,12 @@ def create_pred(model, tens, mask, coords_crop, original_sz, tta='no'):
             pred_lrud = act(logits_lrud)
             pred = torch.mean(torch.stack([pred, pred_lr, pred_ud, pred_lrud]), dim=0)
         else: raise NotImplementedError
-    pred = pred.detach().cpu().numpy()[-1]  # this takes last channel in multi-class, ok for 2-class
+    pred = pred.detach().cpu()
+    if window_size > 0:
+        pred = pred.permute(0, 2, 3, 1)
+        pred = window_unpartition(pred, window_size, pad_hw, (H, W))
+        pred = pred.permute(0, 3, 1, 2)
+    pred = pred[0, -1].numpy()  # this takes last channel in multi-class, ok for 2-class
     # Orders: 0: NN, 1: Bilinear(default), 2: Biquadratic, 3: Bicubic, 4: Biquartic, 5: Biquintic
     pred = skimage.transform.resize(pred, output_shape=original_sz, order=3)
     full_pred = np.zeros_like(mask, dtype=float)
@@ -134,7 +150,7 @@ def main(args):
     for i in tqdm(range(len(test_dataset))):
         im_tens, mask, coords_crop, original_sz, im_name = test_dataset[i]
         start_time = time.perf_counter()
-        full_pred = create_pred(model, im_tens, mask, coords_crop, original_sz, tta=tta)
+        full_pred = create_pred(model, im_tens, mask, coords_crop, original_sz, tta=tta, window_size=args.window_size)
         times.append(time.perf_counter() - start_time)
         save_pred(full_pred, save_results_path, im_name, seed_str)
     
@@ -149,6 +165,7 @@ def get_parser():
     required_named.add_argument('--dataset', type=str, help='generate results for which dataset', required=True)
     parser.add_argument('--tta', type=str, default='from_preds', help='test-time augmentation (no/from_logits/from_preds)')
     parser.add_argument('--config_file', type=str, default=None, help='../data/experiments/name_of_config_file, overrides everything')
+    parser.add_argument('--window_size', type=int, default=0, help='Segment non-overlapping windows of this size. Read from the config file if it is provided')
     # im_size overrides config file
     parser.add_argument('--im_size', help='delimited list input, could be 600,400', type=str, default='512')
     parser.add_argument('--in_c', type=int, default=3, help='channels in input images')
